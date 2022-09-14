@@ -1,3 +1,4 @@
+from socket import SO_VM_SOCKETS_BUFFER_MIN_SIZE
 import pandas as pd
 import os
 import subprocess
@@ -50,13 +51,21 @@ def load_set_dataframes(data_directory="../DATA", set_id="75902-1", exclude_inco
     if (len(months) % 3):
         print("\n\nBAD DATA!!!\n\n")
 
-    column_names = {1:'6M_NEW', 3:'6M_USED', 5:'BOOK_NEW', 7:'BOOK_USED'}
-    cleaned_summaries = [summaries[i].set_index(0).rename(columns={1: column_names[i]}) for i in {1, 3, 5, 7}]
+    summary_names = {1:'6M_NEW', 3:'6M_USED', 5:'BOOK_NEW', 7:'BOOK_USED'}
+    cleaned_summaries = [summaries[i].set_index(0).rename(columns={1: summary_names[i]}) for i in {1, 3, 5, 7}]
     summary = reduce(lambda  left,right: pd.merge(left,right, left_index=True, right_index=True), cleaned_summaries)
     summary = summary.transpose()
-    
-    print(summary)
+    summary = summary.rename(columns={'Total Qty:': 'QTY', 'Min Price:': 'MIN', 'Avg Price:': 'AVG', 'Qty Avg Price:': 'VWAVG', 'Max Price:': 'MAX'})
+    summary = summary.astype({'QTY': 'int', 'MIN': 'string', 'AVG': 'string', 'VWAVG': 'string', 'MAX': 'string'})
+    summary.MIN = summary.MIN.str[4:]
+    summary.AVG = summary.AVG.str[4:]
+    summary.VWAVG = summary.VWAVG.str[4:]
+    summary.MAX = summary.MAX.str[4:]
+    summary = summary.astype({'QTY': 'int', 'MIN': 'float', 'AVG': 'float', 'VWAVG': 'float', 'MAX': 'float'})
 
+    #print(summary.dtypes)   
+    print(summary)
+    
 def main():
     load_set_dataframes()
     pass
