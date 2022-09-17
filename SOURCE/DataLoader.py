@@ -1,74 +1,84 @@
-from socket import SO_VM_SOCKETS_BUFFER_MIN_SIZE
+from operator import irshift
+from time import time
+from typing import *
+from numpy import piecewise
 import pandas as pd
 import os
 import subprocess
 from functools import reduce
+from os.path import exists
 
-def get_set_path(data_directory="../DATA", set_id="75902-1", exclude_incomplete=True):
-    return os.path.join(os.path.dirname(__file__), f"{data_directory}/SETS/{set_id}{'C' if exclude_incomplete else 'CI'}")
+class DataLoader():
 
-def download_set_price_guide(data_directory="../DATA", set_id="75902-1", exclude_incomplete=True):
-    """
-    stores result of curl request
-    params:
-        data_directory: string, path from __file__ to DATA folder
-        set_id: string form, including dashes (e.g. 75902-1)
-        exclude_incomplete: bool, whether to include incomplete sets
-    returns:
-        void 
-    """
+    def load_set_price_guide(self, data_directory="../DATA", set_id="75902-1",  exclude_incomplete=True):
+        path = os.path.join(os.path.dirname(__file__), f"{data_directory}/SETS/{set_id}{'C' if exclude_incomplete else 'CI'}")
+        url = f"https://www.bricklink.com/catalogPG.asp?S={set_id}&colorID=0&v=D&viewExclude={'Y' if exclude_incomplete else 'N'}&cID=Y"
+        return self._get_price_guide_data(path, url)
 
-    url = f"https://www.bricklink.com/catalogPG.asp?S={set_id}&colorID=0&v=D&viewExclude={'Y' if exclude_incomplete else 'N'}&cID=Y"
-    path = get_set_path(data_directory, set_id, exclude_incomplete)
-    _status, output = subprocess.getstatusoutput(f"curl {url}")
-    with open(path, "w+") as file:
-        file.write(output)
-    
-def download_set_price_guide():
+    def load_part_price_guide(self, data_directory="../DATA",part_number='62113',page_color='11',price_and_quantity_color='85'):
+        path = os.path.join(os.path.dirname(__file__), f"{data_directory}/PARTS/{part_number}{price_and_quantity_color}")
+        url = f"https://www.bricklink.com/v2/catalog/catalogitem.page?P={part_number}&idColor={page_color}#T=P&C={price_and_quantity_color}"
+        return self._get_price_guide_data(path, url)
 
-    f"https://www.bricklink.com/v2/catalog/catalogitem.page?P={part_number}&idColor={page_color}#T=P&C={price_and_quantity_color}"
+    def _get_price_guide_data(self, path, url):
+        """
+        manages storage / pulling of price guide data
+        @param url: url of bricklink price guide of item
+        @param path: relative path to where data is stored / will be stored 
+        """
+        if not exists(path):
+            _status, output = subprocess.getstatusoutput(f"curl {url}")
+            with open(path, "w+") as file:
+                file.write(output)
+            
+        with open(path, "r") as file:
+            data = pd.read_html(file.read())
 
+        return self._parse_data(data)
+        
 
-def load_set_dataframes(data_directory="../DATA", set_id="75902-1", exclude_incomplete=True):
-    """
-    params:
-        data_directory: string, path from __file__ to DATA folder
-        set_id: string form, including dashes (e.g. 75902-1)
-        exclude_incomplete: bool, whether to include incomplete sets
-    returns:
-        void 
-    """
-    path = get_set_path(data_directory, set_id, exclude_incomplete)
-    with open(path, "r") as file:
-        tables = pd.read_html(file.read())
+    def _parse_data(self, data):
+        """
+        parses raw data into dataframes
+        @param data: downloaded html of price guide page
+        @returns history, book
+        """
 
-    discard = tables[:11]
-    summaries = tables[11:19]
-    months = tables[19:-7]
-    book = tables[-7:-1]
-    discard = tables[-1:]
+        if (len(data[19:-7]) % 3):
+            print("\n\nBAD DATA!!!\n\n")
+            
+        history = pd.DataFrame()
+        min_date = pd.Timestamp.today()
+        new = True
+        for i, item in enumerate(data[19:-7]):
+            if i % 3 == 0:
+                date = pd.to_datetime(item.iloc[0,0])
+                if date > min_date:
+                    new = False
+                min_date = date
+            if i % 3 == 2:
+                item.columns = item.iloc[0]
+                item = item.iloc[1:-7,1:]
+                item['Date'] = [date for x in item.index]
+                item['New'] = [new for x in item.index]
+                history = pd.concat([history, item])
 
-    if (len(months) % 3):
-        print("\n\nBAD DATA!!!\n\n")
+        book = pd.DataFrame()
+        for i, item in enumerate(data[-7:-1]):
+            new = i % 6 == 2
+            if i % 3 == 2:
+                item.columns = item.iloc[0]
+                item = item.iloc[1:-7,1:]
+                item['New'] = [new for x in item.index]
+                print(item)
+                book = pd.concat((book, item))
 
-    summary_names = {1:'6M_NEW', 3:'6M_USED', 5:'BOOK_NEW', 7:'BOOK_USED'}
-    cleaned_summaries = [summaries[i].set_index(0).rename(columns={1: summary_names[i]}) for i in {1, 3, 5, 7}]
-    summary = reduce(lambda  left,right: pd.merge(left,right, left_index=True, right_index=True), cleaned_summaries)
-    summary = summary.transpose()
-    summary = summary.rename(columns={'Total Qty:': 'QTY', 'Min Price:': 'MIN', 'Avg Price:': 'AVG', 'Qty Avg Price:': 'VWAVG', 'Max Price:': 'MAX'})
-    summary = summary.astype({'QTY': 'int', 'MIN': 'string', 'AVG': 'string', 'VWAVG': 'string', 'MAX': 'string'})
-    summary.MIN = summary.MIN.str[4:]
-    summary.AVG = summary.AVG.str[4:]
-    summary.VWAVG = summary.VWAVG.str[4:]
-    summary.MAX = summary.MAX.str[4:]
-    summary = summary.astype({'QTY': 'int', 'MIN': 'float', 'AVG': 'float', 'VWAVG': 'float', 'MAX': 'float'})
+        return (history, book)
 
-    #print(summary.dtypes)   
-    print(summary)
-    
 def main():
-    load_set_dataframes()
-    pass
+    data_loader = DataLoader()
+    print(data_loader.load_set_price_guide())
+    print(data_loader.load_part_price_guide())
 
 if (__name__ == '__main__'):
     main()
