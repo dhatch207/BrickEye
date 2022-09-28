@@ -1,5 +1,3 @@
-from turtle import color, home
-
 from numpy import size, mean
 from DataLoader import DataLoader
 import matplotlib.pyplot as plt

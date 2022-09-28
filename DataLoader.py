@@ -8,7 +8,7 @@ class DataLoader():
         path = os.path.join(f"{data_directory}/SETS/{set_id}-{'C' if exclude_incomplete else 'CI'}")
         url = f"https://www.bricklink.com/catalogPG.asp?S={set_id}&colorID=0&v=D&viewExclude={'Y' if exclude_incomplete else 'N'}&cID=Y"
         data = self._get_price_guide_data(path, url)
-        price_guide = self._parse_data(data)
+        price_guide = self._parse_price_guide_data(data)
         return price_guide
 
     # wasnt downloading right, skipping for now
@@ -16,7 +16,7 @@ class DataLoader():
     #    path = os.path.join(f"{data_directory}/PARTS/{part_id}-{color_id}")
     #    url = f"https://www.bricklink.com/catalogPG.asp?P={part_id}&ColorID={color_id}"
     #   url = "https://www.bricklink.com/catalogPG.asp?P=21042pb01c02&colorID=150&viewExclude=N&v=D&Y"
-     #   return self._get_price_guide_data(path, url)
+    #   return self._get_price_guide_data(path, url)
 
     def _get_price_guide_data(self, path, url):
         """
@@ -34,7 +34,7 @@ class DataLoader():
 
         return data
 
-    def _parse_data(self, data):
+    def _parse_price_guide_data(self, data):
         """
         parses raw data into dataframes
         @param data: downloaded html of price guide page
@@ -49,6 +49,8 @@ class DataLoader():
         if (len(df[19:-7]) % 3):
             print("\n\nBAD DATA!!!\n\n")
             
+        price_guide = {}
+
         history = pd.DataFrame()
         min_date = pd.Timestamp.today()
         new = True
@@ -68,7 +70,8 @@ class DataLoader():
         history['Each'] = history['Each'].apply(lambda x: x[x.find("$")+1:])
         history = history.astype({'Each': 'float'})
         history = history.sort_values(by='Date')
-
+        price_guide['History'] = history
+        
         book = pd.DataFrame()
         for i, item in enumerate(df[-7:-1]):
             new = i % 6 == 2
@@ -77,8 +80,9 @@ class DataLoader():
                 item = item.iloc[1:-7,1:]
                 item['New'] = [new for x in item.index]
                 book = pd.concat((book, item))
+        price_guide['Book'] = book
 
-        return (history, book)
+        return price_guide
 
 def main():
     data_loader = DataLoader()
