@@ -82,7 +82,7 @@ class DataLoader():
 
 def main():
     data_loader = DataLoader()
-    print(data_loader.load_set_price_guide(os.path.dirname(__file__)+"/DATA"))
+    print(data_loader.load_set_price_guide(os.path.dirname(__file__)+"/../DATA"))
     #print(data_loader.load_part_price_guide())
 
 if (__name__ == '__main__'):
