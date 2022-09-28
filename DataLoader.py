@@ -4,13 +4,13 @@ import os
 
 class DataLoader():
 
-    def load_set_price_guide(self, data_directory="../DATA", set_id="75902-1",  exclude_incomplete=True):
+    def load_set_price_guide(self, data_directory="/DATA", set_id="75902-1",  exclude_incomplete=True):
         path = os.path.join(os.path.dirname(__file__), f"{data_directory}/SETS/{set_id}-{'C' if exclude_incomplete else 'CI'}")
         url = f"https://www.bricklink.com/catalogPG.asp?S={set_id}&colorID=0&v=D&viewExclude={'Y' if exclude_incomplete else 'N'}&cID=Y"
         return self._get_price_guide_data(path, url)
 
     # wasnt downloading right, skipping for now
-    #def load_part_price_guide(self, data_directory="../DATA", part_id='21042pb01c02', color_id='150'):
+    #def load_part_price_guide(self, data_directory="/DATA", part_id='21042pb01c02', color_id='150'):
     #    path = os.path.join(os.path.dirname(__file__), f"{data_directory}/PARTS/{part_id}-{color_id}")
     #    url = f"https://www.bricklink.com/catalogPG.asp?P={part_id}&ColorID={color_id}"
     #   url = "https://www.bricklink.com/catalogPG.asp?P=21042pb01c02&colorID=150&viewExclude=N&v=D&Y"

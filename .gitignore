@@ -1,3 +1,4 @@
-DATA
+DATA/SETS/*
+DATA/PARTS/*
 env
 .vscode
