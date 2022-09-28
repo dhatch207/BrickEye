@@ -9,6 +9,7 @@ class DataLoader():
         url = f"https://www.bricklink.com/catalogPG.asp?S={set_id}&colorID=0&v=D&viewExclude={'Y' if exclude_incomplete else 'N'}&cID=Y"
         data = self._get_price_guide_data(path, url)
         price_guide = self._parse_price_guide_data(data)
+        price_guide['History']['SetId'] = [[set_id] for x in price_guide['History'].index]
         return price_guide
 
     # wasnt downloading right, skipping for now
