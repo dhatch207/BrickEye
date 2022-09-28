@@ -4,14 +4,16 @@ import os
 
 class DataLoader():
 
-    def load_set_price_guide(self, data_directory="/DATA", set_id="75902-1",  exclude_incomplete=True):
-        path = os.path.join(os.path.dirname(__file__), f"{data_directory}/SETS/{set_id}-{'C' if exclude_incomplete else 'CI'}")
+    def load_set_price_guide(self, data_directory, set_id="75902-1",  exclude_incomplete=True):
+        path = os.path.join(f"{data_directory}/SETS/{set_id}-{'C' if exclude_incomplete else 'CI'}")
         url = f"https://www.bricklink.com/catalogPG.asp?S={set_id}&colorID=0&v=D&viewExclude={'Y' if exclude_incomplete else 'N'}&cID=Y"
-        return self._get_price_guide_data(path, url)
+        data = self._get_price_guide_data(path, url)
+        price_guide = self._parse_data(data)
+        return price_guide
 
     # wasnt downloading right, skipping for now
     #def load_part_price_guide(self, data_directory="/DATA", part_id='21042pb01c02', color_id='150'):
-    #    path = os.path.join(os.path.dirname(__file__), f"{data_directory}/PARTS/{part_id}-{color_id}")
+    #    path = os.path.join(f"{data_directory}/PARTS/{part_id}-{color_id}")
     #    url = f"https://www.bricklink.com/catalogPG.asp?P={part_id}&ColorID={color_id}"
     #   url = "https://www.bricklink.com/catalogPG.asp?P=21042pb01c02&colorID=150&viewExclude=N&v=D&Y"
      #   return self._get_price_guide_data(path, url)
@@ -30,7 +32,7 @@ class DataLoader():
         with open(path, "r") as file:
             data = file.read()
 
-        return self._parse_data(data)
+        return data
 
     def _parse_data(self, data):
         """
@@ -80,7 +82,7 @@ class DataLoader():
 
 def main():
     data_loader = DataLoader()
-    print(data_loader.load_set_price_guide())
+    print(data_loader.load_set_price_guide(os.path.dirname(__file__)+"/DATA"))
     #print(data_loader.load_part_price_guide())
 
 if (__name__ == '__main__'):
