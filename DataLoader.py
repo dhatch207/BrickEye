@@ -9,7 +9,7 @@ class DataLoader():
         url = f"https://www.bricklink.com/catalogPG.asp?S={set_id}&colorID=0&v=D&viewExclude={'Y' if exclude_incomplete else 'N'}&cID=Y"
         data = self._get_price_guide_data(path, url)
         price_guide = self._parse_price_guide_data(data)
-        price_guide['History']['SetId'] = [[set_id] for x in price_guide['History'].index]
+        price_guide['History']['SetId'] = [set_id for x in price_guide['History'].index]
         return price_guide
 
     # wasnt downloading right, skipping for now
@@ -67,9 +67,10 @@ class DataLoader():
                 item['Date'] = [date for x in item.index]
                 item['New'] = [new for x in item.index]
                 history = pd.concat([history, item])
-        history = history.astype({'Qty': 'int', 'Each': 'string'})
-        history['Each'] = history['Each'].apply(lambda x: x[x.find("$")+1:])
-        history = history.astype({'Each': 'float'})
+        history = history.rename(columns={'Each':'Price', 'Qty':'Quantity'})
+        history = history.astype({'Quantity': 'int', 'Price': 'string'})
+        history['Price'] = history['Price'].apply(lambda x: x[x.find("$")+1:])
+        history = history.astype({'Price': 'float'})
         history = history.sort_values(by='Date')
         price_guide['History'] = history
         
